@@ -16,6 +16,18 @@ Suporta 3 engines: **Edge-TTS** (Microsoft online, sem GPU), **F5-TTS** (GPU loc
 
 > **Edge-TTS** usa o endpoint público do Microsoft Edge browser — gratuito, sem conta Azure.
 
+**Vozes pt-BR disponíveis (engine `edge`):**
+
+| Voz | Gênero |
+|-----|--------|
+| `pt-BR-AntonioNeural` *(default)* | Masculina |
+| `pt-BR-FranciscaNeural` | Feminina |
+| `pt-BR-ThalitaMultilingualNeural` | Feminina (multilíngue) |
+
+```bash
+python3 tools/config.py set edge_voice pt-BR-FranciscaNeural
+```
+
 ## Requisitos
 
 | Item | Tipo | Como instalar |
