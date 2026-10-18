@@ -30,27 +30,70 @@ SECRET_FILE = os.environ.get(
     "VOX_SECRET_FILE", os.path.expanduser("~/.kiro/crew/.secrets/voxlocal.env")
 )
 
+CREW_CONFIG = os.path.expanduser("~/.kiro/crew/config.json")
+
 # teto de caracteres: acima disso vira áudio longo e ruim de ouvir (mesma ideia do Luna).
 # 0 desliga. O agente deve quebrar em partes antes de chamar; isto é só o guard-rail.
 SAY_MAX_CHARS = int(os.environ.get("VOX_MAX_CHARS", "600"))
 
 
+def _load_crew_credentials() -> dict:
+    """Lê bot_token e chat_id diretamente do config do Kiro Crew (fonte da verdade).
+    Retorna dict com VOX_BOT_TOKEN e VOX_CHAT_ID, ou vazio se não encontrar."""
+    try:
+        import json as _json
+        cfg = _json.loads(open(CREW_CONFIG, encoding="utf-8").read())
+        tg = cfg.get("telegram", {})
+        token = tg.get("bot_token", "")
+        allowed = tg.get("allowed_user_ids", [])
+        chat_id = str(allowed[0]) if allowed else ""
+        result = {}
+        if token:
+            result["VOX_BOT_TOKEN"] = token
+        if chat_id:
+            result["VOX_CHAT_ID"] = chat_id
+        return result
+    except Exception:
+        return {}
+
+
 def _load_env(path: str) -> dict:
-    """Lê KEY=VALUE de um arquivo .env simples (sem shell), retorna dict.
-    Uma env var do PROCESSO com o mesmo nome tem precedência (permite override
-    pontual: VOX_ENGINE=f5 vox_say.sh ...)."""
+    """Carrega configuração para o vox_say.
+
+    Prioridade (maior para menor):
+      1. Variável de ambiente do processo (override pontual: VOX_ENGINE=f5 ...)
+      2. Kiro Crew config.json (fonte da verdade para token e chat_id)
+      3. Arquivo .env em path (valores extras / legado)
+
+    Credenciais NÃO precisam de arquivo .env — são lidas do Kiro Crew.
+    Se o .env não existir, continua sem erro."""
     env = {}
-    if not os.path.isfile(path):
-        _die(f"arquivo de secret não encontrado: {path}")
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, _, v = line.partition("=")
-            k = k.strip()
-            # env var do processo vence o arquivo (override pontual)
-            env[k] = os.environ.get(k, v.strip().strip('"').strip("'"))
+
+    # 3. .env como base (se existir — opcional)
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                k = k.strip()
+                env[k] = v.strip().strip('"').strip("'")
+
+    # 2. Kiro Crew config sobrescreve token/chat_id do .env
+    env.update(_load_crew_credentials())
+
+    # 1. Env vars do processo têm precedência final
+    for k in list(env.keys()):
+        if k in os.environ:
+            env[k] = os.environ[k]
+
+    # Credenciais obrigatórias — falha com mensagem clara
+    if not env.get("VOX_BOT_TOKEN"):
+        _die("VOX_BOT_TOKEN não encontrado. Configure o Telegram em Settings > Channels no Kiro Crew.")
+    if not env.get("VOX_CHAT_ID"):
+        _die("VOX_CHAT_ID não encontrado. Configure o Telegram em Settings > Channels no Kiro Crew.")
+
     return env
 
 

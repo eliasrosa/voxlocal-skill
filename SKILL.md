@@ -66,21 +66,20 @@ bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --health
 
 ## Credenciais e config
 
-Arquivo `~/.kiro/crew/.secrets/voxlocal.env` (chmod 600, NÃO versionar):
+Token e chat_id são lidos **automaticamente do Kiro Crew** (`telegram.bot_token` e `telegram.allowed_user_ids` do `config.json`). Nenhum arquivo extra é necessário.
+
+Variáveis opcionais (engine, voz, velocidade) podem ser configuradas em `~/.kiro/crew/.secrets/voxlocal.env`:
 
 ```
-VOX_BOT_TOKEN=<token do bot Telegram>
-VOX_CHAT_ID=<seu chat_id>
+VOX_ENGINE=auto           # edge | f5 | piper | auto
+VOX_EDGE_VOICE=pt-BR-AntonioNeural
 VOX_DEVICE=cuda
+VOX_SPEED=0.9
 VOX_REF_AUDIO=<path para o áudio de referência .wav>
 VOX_REF_TEXT=<transcrição literal do áudio de referência>
-VOX_OPUS_BITRATE=32k
 ```
 
-- `VOX_REF_AUDIO` = ~6-10s de voz que define o timbre (F5-TTS é voice-clone).
-  Sem áudio de referência o F5-TTS não sintetiza.
-- `VOX_REF_TEXT` = o que é falado nesse áudio (obrigatório para o clone).
-- Reaproveita `LUNA_BOT_TOKEN`/`LUNA_CHAT_ID` como fallback se `VOX_*` ausentes.
+Ver `docs/configuracao.md` para a lista completa.
 
 ## Setup do venv (uma vez — pip pesado, rodar no terminal)
 
