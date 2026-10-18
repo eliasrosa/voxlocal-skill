@@ -30,7 +30,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 import config as _config_module
 
 CREW_CONFIG  = os.path.expanduser("~/.kiro/crew/config.json")
-SAY_MAX_CHARS = 0  # lido do config abaixo
 
 
 def _load_crew_credentials() -> dict:
@@ -233,12 +232,12 @@ def _send_voice(text: str, wav: str, cfg: dict) -> dict:
     """Converte o wav e envia como voice message via Telegram sendVoice."""
     import httpx  # import tardio
 
-    token = cfg.get("VOX_BOT_TOKEN") or cfg.get("LUNA_BOT_TOKEN", "")
-    chat_id = cfg.get("VOX_CHAT_ID") or cfg.get("LUNA_CHAT_ID", "")
+    token = cfg.get("VOX_BOT_TOKEN", "")
+    chat_id = cfg.get("VOX_CHAT_ID", "")
     if not token:
-        _die("VOX_BOT_TOKEN ausente no env")
+        _die("VOX_BOT_TOKEN ausente — configure o Telegram no Kiro Crew (Settings > Channels)")
     if not chat_id:
-        _die("VOX_CHAT_ID ausente no env")
+        _die("VOX_CHAT_ID ausente — configure o Telegram no Kiro Crew (Settings > Channels)")
 
     ogg = wav.replace(".wav", ".ogg")
     _to_ogg(wav, ogg, cfg.get("VOX_OPUS_BITRATE", "32k"))
@@ -261,9 +260,10 @@ def cmd_say(text: str, cfg: dict) -> None:
     text = text.strip()
     if not text:
         _die("texto vazio")
-    if SAY_MAX_CHARS > 0 and len(text) > SAY_MAX_CHARS:
-        _die(f"texto too_long: {len(text)} > {SAY_MAX_CHARS} chars "
-             "(o agente deve quebrar em partes antes de chamar)", 3)
+    max_chars = int(cfg.get("VOX_MAX_CHARS", "600"))
+    if max_chars > 0 and len(text) > max_chars:
+        _die(f"texto too_long: {len(text)} > {max_chars} chars "
+             "(quebrar em partes antes de chamar)", 3)
 
     workdir = tempfile.mkdtemp(prefix="voxlocal_", dir=os.environ.get("KIROCREW_SCRATCH"))
     wav = os.path.join(workdir, f"{uuid.uuid4().hex}.wav")
