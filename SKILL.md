@@ -1,6 +1,6 @@
 ---
 name: voxlocal
-description: Use when TTS or voice message is needed in a Telegram conversation. Local TTS with 3 engines — Edge-TTS online (Microsoft, no GPU), F5-TTS GPU (offline, voice clone), Piper offline (CPU). Sends voice messages inline via Telegram sendVoice. On-demand only — never send audio automatically.
+description: Use when the user asks to send an audio message or TTS to Telegram, or when a voice summary should be sent proactively. Generates speech in pt-BR and sends as Telegram voice message (sendVoice). Three engines: Edge-TTS (Microsoft online, no GPU, default), F5-TTS (local GPU, voice clone), Piper (local CPU, offline). Triggers include 'manda um áudio', 'fala isso no Telegram', 'TTS', 'resumo em áudio', 'vox', 'voice message'.
 inclusion: auto
 ---
 
