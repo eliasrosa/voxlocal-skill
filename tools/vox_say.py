@@ -38,7 +38,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import config as _config_module
 
-CREW_CONFIG  = os.path.expanduser("~/.kiro/crew/config.json")
+CREW_HOME   = os.environ.get("KIROCREW_HOME") or os.path.expanduser("~/.kiro/crew")
+CREW_CONFIG = os.path.join(CREW_HOME, "config.json")
 
 
 def _load_crew_credentials() -> dict:
@@ -146,7 +147,7 @@ def _synth_piper(text: str, wav_out: str, cfg: dict) -> None:
     lento). Roda o piper-tts como módulo do venv (python -m piper).
     """
     model = cfg.get("VOX_PIPER_MODEL",
-                    os.path.expanduser("~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx"))
+                    os.path.join(CREW_HOME, "models/piper/pt_BR-faber-medium.onnx"))
     if not os.path.isfile(model):
         _die(f"VOX_PIPER_MODEL ausente: {model}")
     length = cfg.get("VOX_PIPER_LENGTH_SCALE", "1.1")  # >1 = fala mais devagar
@@ -326,7 +327,7 @@ def cmd_health(cfg: dict) -> None:
     # piper (offline, sem GPU)
     try:
         import piper  # noqa: F401
-        pm = cfg.get("VOX_PIPER_MODEL", os.path.expanduser("~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx"))
+        pm = cfg.get("VOX_PIPER_MODEL", os.path.join(CREW_HOME, "models/piper/pt_BR-faber-medium.onnx"))
         print(f"piper: ok  model={'ok' if os.path.isfile(pm) else 'AUSENTE ' + pm}")
     except ModuleNotFoundError:
         print("piper: AUSENTE (pip install piper-tts)")

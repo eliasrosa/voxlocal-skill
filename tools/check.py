@@ -20,6 +20,10 @@ GPU_MIN_CC = (7, 0)
 # Mínimo de VRAM livre recomendado para F5-TTS (MB)
 GPU_MIN_VRAM_MB = 2500
 
+import os as _os
+CREW_HOME = _os.environ.get("KIROCREW_HOME") or str(Path.home() / ".kiro/crew")
+del _os  # alias usado só para esta linha
+
 ok = True
 
 
@@ -64,8 +68,8 @@ def load_voxlocal_config() -> dict:
     cfg_file = Path(__file__).parent.parent / ".data/config.json"
     defaults = {
         "engine": "auto",
-        "piper_model": str(Path.home() / ".kiro/crew/models/piper/pt_BR-faber-medium.onnx"),
-        "ref_audio":   str(Path.home() / ".kiro/crew/models/f5-tts/ref/voz_ref.wav"),
+        "piper_model": os.path.join(CREW_HOME, "models/piper/pt_BR-faber-medium.onnx"),
+        "ref_audio":   os.path.join(CREW_HOME, "models/f5-tts/ref/voz_ref.wav"),
     }
     if cfg_file.exists():
         stored = json.loads(cfg_file.read_text())
@@ -107,7 +111,7 @@ if venv_ok:
 # ─── Kiro Crew / Telegram ──────────────────
 print("\nKiro Crew:")
 try:
-    crew_cfg = json.loads((Path.home() / ".kiro/crew/config.json").read_text())
+    crew_cfg = json.loads(Path(os.path.join(CREW_HOME, "config.json")).read_text())
     tg = crew_cfg.get("telegram", {})
     check("telegram.bot_token configurado", bool(tg.get("bot_token", "")),
           "Configure o Telegram em Settings > Channels no Kiro Crew")
