@@ -126,6 +126,7 @@ VOX_ENGINE=f5 python3 tools/vox_say.py "texto"
 |--------|-----|
 | `tools/check.py` | Pré-check: valida requisitos + Telegram no Kiro Crew (exit 0/1) |
 | `tools/config.py` | Lê/grava `.data/config.json` |
+| `tools/set_voice.py` | Configura a voz de referência do F5-TTS (interativo ou `--piper`) |
 | `tools/vox_say.py` | Script principal: sintetiza e envia voice message (auto-seleciona venv) |
 | `tools/vox_say.py` | Implementação Python |
 
@@ -148,10 +149,12 @@ voxlocal/
 ├── docs/
 │   ├── instalacao.md   # setup detalhado dos 3 engines + voice clone
 │   ├── configuracao.md # referência completa das chaves do config.json
+│   ├── f5-voice-clone.md # como funciona o voice clone, trocar voz, ajuste fino
 │   └── runbook.md      # troubleshooting e operações do dia a dia
 └── tools/
     ├── check.py        # pré-check de requisitos (exit 0/1)
     ├── config.py       # lê/grava .data/config.json
+    ├── set_voice.py    # configura voz de referência do F5-TTS
     └── vox_say.py      # script principal (auto-seleciona venv do Kiro Crew via re-exec)
 ```
 
