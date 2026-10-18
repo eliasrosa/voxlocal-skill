@@ -90,9 +90,9 @@ Ver `docs/configuracao.md` para a lista completa de chaves.
 
 ```bash
 python3 tools/check.py                                  # pré-check completo
-bash tools/vox_say.sh --health                          # health check
-bash tools/vox_say.sh --engine piper                    # definir engine padrão
-bash tools/vox_say.sh "teste de voz funcionando"        # teste real
+python3 tools/vox_say.py --health                          # health check
+python3 tools/vox_say.py --engine piper                    # definir engine padrão
+python3 tools/vox_say.py "teste de voz funcionando"        # teste real
 ```
 
 ## Rebuild do venv do Kiro Crew

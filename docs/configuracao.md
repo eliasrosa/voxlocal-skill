@@ -14,7 +14,7 @@ python3 tools/config.py reset                # restaurar todos os defaults
 Override pontual (só na chamada, não persiste no config.json):
 
 ```bash
-VOX_ENGINE=f5 bash tools/vox_say.sh "texto"
+VOX_ENGINE=f5 python3 tools/vox_say.py "texto"
 ```
 
 ## Referência completa de chaves
