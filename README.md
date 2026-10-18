@@ -55,20 +55,19 @@ Ver `docs/instalacao.md` para baixar o checkpoint pt-br e gerar o áudio de refe
 
 ## Configuração
 
-O token e o chat_id são lidos **automaticamente do Kiro Crew** — não é necessário copiar nada na mão:
+**Token e chat_id são lidos automaticamente do Kiro Crew** — nenhum arquivo de configuração extra necessário.
 
-```bash
-python3 tools/setup_env.py          # cria ~/.kiro/crew/.secrets/voxlocal.env
-python3 tools/setup_env.py --dry-run  # mostra o que seria gravado sem gravar
+O `vox_say.py` lê `telegram.bot_token` e `telegram.allowed_user_ids` diretamente do `config.json` do Kiro Crew em cada execução. Se o Telegram estiver configurado no Kiro Crew, a skill funciona sem setup adicional.
+
+Para variáveis opcionais (engine, voz, velocidade), crie `~/.kiro/crew/.secrets/voxlocal.env` (opcional):
+
+```
+VOX_ENGINE=auto           # edge | f5 | piper | auto
+VOX_EDGE_VOICE=pt-BR-AntonioNeural
+VOX_SPEED=0.9
 ```
 
-Para ver ou alterar variáveis individualmente:
-
-```bash
-cat ~/.kiro/crew/.secrets/voxlocal.env
-```
-
-Ver `docs/configuracao.md` para todas as variáveis disponíveis.
+Ver `docs/configuracao.md` para a lista completa.
 
 > ⚠️ Verificar que `voice_reply.enabled = false` no `config.json` do Kiro Crew — evita conflito de áudio automático pelo gateway.
 
@@ -85,7 +84,6 @@ bash tools/vox_say.sh --engine edge      # trocar engine padrão
 | Script | Uso |
 |--------|-----|
 | `tools/check.py` | Pré-check: valida requisitos (exit 0/1) |
-| `tools/setup_env.py` | Bootstrap: lê token/chat_id do Kiro Crew e cria `voxlocal.env` |
 | `tools/vox_say.sh` | Wrapper principal: sintetiza e envia voice message |
 | `tools/vox_say.py` | Implementação Python (chamado pelo wrapper) |
 
@@ -117,13 +115,12 @@ voxlocal/
 ├── .gitignore
 ├── docs/
 │   ├── instalacao.md  # setup detalhado dos 3 engines
-│   ├── configuracao.md # todas as variáveis de env
+│   ├── configuracao.md # variáveis opcionais de env
 │   └── runbook.md     # troubleshooting e operações
 └── tools/
     ├── check.py       # pré-check de requisitos
-    ├── setup_env.py   # bootstrap: lê config do Kiro Crew → cria voxlocal.env
     ├── vox_say.sh     # wrapper bash
-    └── vox_say.py     # implementação Python
+    └── vox_say.py     # implementação Python (lê config do Kiro Crew)
 ```
 
 ## Licença
