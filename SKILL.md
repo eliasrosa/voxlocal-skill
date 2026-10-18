@@ -1,125 +1,186 @@
 ---
 name: voxlocal
-description: Use when TTS or voice message is needed in a Telegram conversation. Local TTS (F5-TTS pt-br GPU, Edge-TTS online, Piper offline) sends voice messages inline via Telegram sendVoice. On-demand only — never send audio automatically.
+description: Use when TTS or voice message is needed in a Telegram conversation. Local TTS with 3 engines — Edge-TTS online (Microsoft, no GPU), F5-TTS GPU (offline, voice clone), Piper offline (CPU). Sends voice messages inline via Telegram sendVoice. On-demand only — never send audio automatically.
 inclusion: auto
 ---
 
-# voxlocal — TTS local pt-BR para Telegram
+# voxlocal — TTS pt-BR para Telegram
 
-Skill de síntese de voz com 3 engines: F5-TTS local na GPU, Edge-TTS Microsoft online, e Piper offline. Envia voice message diretamente no Telegram via `sendVoice`.
+Skill de síntese de voz com 3 engines. Envia voice message diretamente no Telegram via `sendVoice`.
 
-## Quando usar
+## Regras de uso
 
-- **Só sob demanda no Telegram**: quando o usuário pedir áudio/voz explicitamente.
-- **NUNCA** enviar áudio automaticamente.
-- No **dashboard** NÃO usar esta skill — o dashboard usa o Piper nativo do Kiro Crew.
+- **Só no Telegram, só sob demanda** — quando o usuário pedir áudio explicitamente.
+- **NUNCA** enviar automaticamente sem pedido.
+- No **dashboard** NÃO usar — o dashboard usa o Piper nativo do Kiro Crew.
+- Teto de **600 chars** por chamada. Resposta longa → quebrar em 2-3 partes em sequência.
+- Texto sem markdown, URL ou código. Ideal ~350-450 chars por áudio.
 
-## Como usar
-
-Chamar o wrapper com o texto do resumo:
+## Comando
 
 ```bash
-bash ~/.kiro/skills/voxlocal/tools/vox_say.sh "resumo curto aqui"
+bash ~/.kiro/skills/voxlocal/tools/vox_say.sh "texto aqui"
 ```
 
-- Teto de **600 chars** por chamada. Resposta longa → quebrar em 2-3 partes e
-  chamar em sequência (mesma regra do LunaSpeak).
-- Resumo sem markdown/URL/código, ~350-450 chars ideal.
+Outros modos:
 
-### Engines (VOX_ENGINE)
+```bash
+bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --health      # diagnóstico completo
+bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --self-test   # envia frase de teste
+bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --engine edge # troca engine padrão
+```
 
-Selecionável e persistente no env, estilo `--mode` do LunaSpeak:
+## Engines
 
-- `edge` → **Microsoft Edge-TTS online** (voz Francisca, melhor dicção, sem GPU,
-  ~3-4s; precisa de internet)
-- `f5` → **F5-TTS local na GPU** (offline, voice clone, ~5-15s, ~1.35GB)
-- `piper` → **Piper offline na CPU** (leve/portável ~60MB, sem GPU nem rede, robótica)
-- `auto` (default) → Edge → fallback F5 → fallback Piper
+| Engine | GPU? | Rede? | Qualidade | Velocidade | Peso |
+|--------|------|-------|-----------|------------|------|
+| `edge` | não | **sim** | ★★★★☆ melhor dicção | ~3-4s | ~0 (online) |
+| `f5` | **sim** | não | ★★★☆☆ voice clone | ~5-15s cold, ~2-5s warm | ~1.35GB + torch |
+| `piper` | não | não | ★★☆☆☆ robótica | ~2-5s | ~60MB |
 
-Trocar o engine padrão (grava no env):
+`auto` (default): tenta `edge` → fallback `f5` → fallback `piper`.
+
+**Edge-TTS** usa o mesmo endpoint público que o Microsoft Edge browser — gratuito, sem conta Azure.
+
+Trocar engine padrão (persiste em `.data/config.json`):
 
 ```bash
 bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --engine edge   # ou f5 | piper | auto
 ```
 
-Forçar numa chamada só, sem persistir: `VOX_ENGINE=f5 vox_say.sh "texto"`.
-Voz do Edge: `VOX_EDGE_VOICE` (pt-BR-FranciscaNeural fem, pt-BR-AntonioNeural masc,
-pt-BR-ThalitaMultilingualNeural fem).
-
-**Docs completos:** `docs/instalacao.md` (setup dos 3 engines, compartilhável),
-`docs/configuracao.md` (todas as variáveis), `docs/runbook.md` (troubleshooting).
-
-Checar saúde antes do primeiro uso na sessão:
+Override pontual (só na chamada, não persiste):
 
 ```bash
-bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --health
+VOX_ENGINE=f5 bash ~/.kiro/skills/voxlocal/tools/vox_say.sh "texto"
 ```
 
-## Arquitetura
+## Configuração
 
-`texto → F5-TTS pt-br (GPU, load sob demanda) → wav → ffmpeg OGG/Opus → Telegram sendVoice`
+Token e chat_id são lidos **automaticamente do Kiro Crew** — nenhum arquivo extra necessário.
 
-- **Modelo carregado sob demanda** e liberado ao fim (`torch.cuda.empty_cache()`):
-  convive com o whisper STT que já ocupa ~1.9GB na GPU. Cold start ~10-15s no
-  primeiro áudio; síntese em si ~2-5s.
-- **100% local**: não há chamada de rede exceto o `sendVoice` ao Telegram.
+Variáveis de comportamento ficam em `.data/config.json` (gitignored, persiste entre atualizações):
 
-## Credenciais e config
-
-Token e chat_id são lidos **automaticamente do Kiro Crew** (`telegram.bot_token` e `telegram.allowed_user_ids` do `config.json`). Nenhum arquivo extra é necessário.
-
-Variáveis opcionais (engine, voz, velocidade) podem ser configuradas em `~/.kiro/crew/.secrets/voxlocal.env`:
-
-```
-VOX_ENGINE=auto           # edge | f5 | piper | auto
-VOX_EDGE_VOICE=pt-BR-AntonioNeural
-VOX_DEVICE=cuda
-VOX_SPEED=0.9
-VOX_REF_AUDIO=<path para o áudio de referência .wav>
-VOX_REF_TEXT=<transcrição literal do áudio de referência>
+```bash
+python3 ~/.kiro/skills/voxlocal/tools/config.py                     # ver config atual
+python3 ~/.kiro/skills/voxlocal/tools/config.py set engine edge      # trocar engine
+python3 ~/.kiro/skills/voxlocal/tools/config.py set edge_voice pt-BR-AntonioNeural
+python3 ~/.kiro/skills/voxlocal/tools/config.py set speed 0.85
 ```
 
-Ver `docs/configuracao.md` para a lista completa.
+### Chaves de configuração
 
-## Setup do venv (uma vez — pip pesado, rodar no terminal)
+**Engine:**
 
-O torch + f5-tts NÃO vêm no venv (sumiram no rebuild do 0.7.x). Instalar no
-venv real do Kiro Crew:
+| Chave | Default | Valores |
+|-------|---------|---------|
+| `engine` | `auto` | `edge` \| `f5` \| `piper` \| `auto` |
+
+**Edge-TTS (Microsoft online):**
+
+| Chave | Default | Descrição |
+|-------|---------|-----------|
+| `edge_voice` | `pt-BR-AntonioNeural` | `pt-BR-AntonioNeural` (masc) \| `pt-BR-FranciscaNeural` (fem) \| `pt-BR-ThalitaMultilingualNeural` (fem) |
+| `edge_timeout` | `10` | Timeout (s) antes de cair no fallback |
+
+**F5-TTS (GPU local, voice clone):**
+
+| Chave | Default | Descrição |
+|-------|---------|-----------|
+| `device` | `cuda` | `cuda` \| `cpu` (cpu ~30s+, lento) |
+| `speed` | `0.9` | Ritmo da fala — menor = mais devagar (0.85-1.0) |
+| `nfe_step` | `32` | Passos de inferência — mais = melhor dicção, mais lento (32-48) |
+| `ref_audio` | *(ver instalação)* | Path do áudio de referência ~6-10s (define o timbre) |
+| `ref_text` | *(ver instalação)* | Transcrição literal do áudio de referência |
+| `f5_ckpt` | *(ver instalação)* | Path do checkpoint pt-br (.safetensors) |
+| `f5_vocab` | *(ver instalação)* | Path do vocab.txt |
+
+**Piper (offline, CPU):**
+
+| Chave | Default | Descrição |
+|-------|---------|-----------|
+| `piper_model` | `~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx` | Model .onnx |
+| `piper_length_scale` | `1.1` | Ritmo — maior = mais devagar |
+
+**Envio / geral:**
+
+| Chave | Default | Descrição |
+|-------|---------|-----------|
+| `opus_bitrate` | `32k` | Bitrate do OGG/Opus enviado |
+| `send_timeout` | `60` | Timeout (s) do upload ao Telegram |
+| `max_chars` | `600` | Teto de chars por chamada (0 = sem limite) |
+
+## Pré-check
+
+```bash
+python3 ~/.kiro/skills/voxlocal/tools/check.py
+```
+
+Valida: ffmpeg, Python 3.10+, pacotes no venv, Telegram configurado no Kiro Crew, modelos presentes.
+
+## Instalação de engines
+
+**Mínimo (edge + piper, sem GPU):**
 
 ```bash
 VP=~/.kiro/crew-venv-current/bin/pip3
-# torch com CUDA 12.1
-$VP install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
-# F5-TTS (traz vocos, transformers etc.)
-$VP install f5-tts
-# piper-tts leve, só para gerar o áudio de referência do clone (faber pt-BR, MIT)
-$VP install piper-tts
+$VP install edge-tts piper-tts httpx
 ```
 
-Depois validar: `vox_say.sh --health` deve mostrar torch cuda_available=True,
-f5-tts ok, ffmpeg ok, ref_audio ok, bot_token/chat_id ok.
-
-## Áudio de referência (voice clone)
-
-F5-TTS NÃO sintetiza sem um áudio de referência (~6-10s) que define o timbre.
-Gerar com a voz Piper faber pt-BR como ponto de partida:
+Baixar modelo Piper pt-BR (~60MB):
 
 ```bash
-FRASE="Esta é uma amostra de voz de referência para síntese de fala em português."
-VPY=~/.kiro/crew-venv-current/bin/python3
-REF_WAV=~/.kiro/crew/models/f5-tts/ref/voz_ref.wav
-mkdir -p "$(dirname $REF_WAV)"
-echo "$FRASE" | $VPY -m piper \
-  --model ~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx \
-  --output_file "$REF_WAV"
-# setar VOX_REF_TEXT="$FRASE" e VOX_REF_AUDIO="$REF_WAV" no voxlocal.env
+mkdir -p ~/.kiro/crew/models/piper && cd ~/.kiro/crew/models/piper
+curl -fsSL -O https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx
+curl -fsSL -O https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json
 ```
 
-Trocar por voz personalizada depois: gravar ~10s limpos, salvar no path configurado
-em `VOX_REF_AUDIO`, atualizar `VOX_REF_TEXT` com a transcrição literal.
+**Completo (+ F5-TTS na GPU, ~3GB VRAM):**
+
+```bash
+VP=~/.kiro/crew-venv-current/bin/pip3
+$VP install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+$VP install f5-tts
+```
+
+Baixar checkpoint pt-br e gerar áudio de referência:
+
+```bash
+VPY=~/.kiro/crew-venv-current/bin/python3
+$VPY -c "
+from huggingface_hub import hf_hub_download
+import os; d = os.path.expanduser('~/.kiro/crew/models/f5-tts')
+hf_hub_download('firstpixel/F5-TTS-pt-br','pt-br/model_last.safetensors',local_dir=d)
+hf_hub_download('SWivid/F5-TTS','F5TTS_Base/vocab.txt',local_dir=d)
+"
+# Gerar áudio de referência com Piper faber
+FRASE="Esta é uma amostra de voz de referência para síntese de fala em português."
+REF=~/.kiro/crew/models/f5-tts/ref/voz_ref.wav
+mkdir -p "$(dirname $REF)"
+echo "$FRASE" | $VPY -m piper \
+  --model ~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx \
+  --output_file "$REF"
+# Configurar os paths
+python3 ~/.kiro/skills/voxlocal/tools/config.py set ref_audio "$REF"
+python3 ~/.kiro/skills/voxlocal/tools/config.py set ref_text "$FRASE"
+```
+
+> Trocar por voz humana depois: gravar ~10s limpos, salvar no path de `ref_audio`, atualizar `ref_text` com a transcrição literal.
+
+## Erros Comuns
+
+| Sintoma | Causa | Correção |
+|---------|-------|----------|
+| `telegram.bot_token não encontrado` | Telegram não configurado no Kiro Crew | Settings > Channels > Telegram |
+| `torch: AUSENTE` / `f5-tts: AUSENTE` | venv recriado no auto-update | reinstalar (ver Instalação acima) |
+| STT roda mas na CPU | `device=cpu` ou VRAM insuficiente | `config.py set device cuda` |
+| `edge falhou ... fallback` | sem internet | esperado no `auto`; usa F5/Piper |
+| áudio muito rápido (F5) | speed alto | `config.py set speed 0.85` |
+| dicção robótica (F5) | ref gerada por Piper | gravar ref de voz humana + `nfe_step 48` |
+| OOM na GPU | F5 + whisper STT juntos | F5 é sob demanda; se persistir usar `--engine piper` |
+| `.wav` automático chegando | `voice_reply.enabled=true` no Kiro Crew | `config.json` do Kiro Crew: `voice_reply.enabled=false` |
 
 ## Notas
 
-- ffmpeg já instalado no Mint (6.1.1).
-- VRAM: F5-TTS usa ~2-3GB + whisper STT ~1.9GB → pode ser apertado em GPUs de 6GB; por isso F5-TTS é carregado sob demanda.
-- Se der OOM: parar/aliviar o STT, ou usar `VOX_DEVICE=cpu` (lento, ~30s+).
+- F5-TTS carrega sob demanda e libera a VRAM ao fim — convive com o whisper STT.
+- Cold start do F5 ~10-15s (primeira vez na sessão); síntese em si ~2-5s.
+- Em GPUs com ~6GB VRAM, F5 + whisper pode ser apertado. Usar `engine=edge` nesses casos.

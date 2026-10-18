@@ -1,70 +1,74 @@
 # voxlocal — Configuração
 
-Arquivo: `~/.kiro/crew/.secrets/voxlocal.env` (chmod 600, NÃO versionar).
-Formato `KEY=value`, um por linha. Uma env var do PROCESSO com o mesmo nome
-tem precedência (permite override pontual: `VOX_ENGINE=f5 vox_say.sh "texto"`).
+Configuração via `.data/config.json` (gitignored, persiste entre `git pull`).
+Credenciais (token, chat_id) são lidas do Kiro Crew — não ficam aqui.
 
-## Credenciais (obrigatórias)
+## Gerenciar configuração
 
-| Chave | Descrição |
-|-------|-----------|
-| `VOX_BOT_TOKEN` | Token do bot Telegram (@BotFather). Fallback: `LUNA_BOT_TOKEN`. |
-| `VOX_CHAT_ID`   | Seu chat_id no Telegram. Fallback: `LUNA_CHAT_ID`. |
-
-## Seleção de engine
-
-| Chave | Default | Descrição |
-|-------|---------|-----------|
-| `VOX_ENGINE` | `auto` | `edge` \| `f5` \| `piper` \| `auto` (edge→f5→piper) |
-
-## Edge-TTS (Microsoft online)
-
-| Chave | Default | Descrição |
-|-------|---------|-----------|
-| `VOX_EDGE_VOICE` | `pt-BR-FranciscaNeural` | Voz: Francisca (fem), `pt-BR-AntonioNeural` (masc), `pt-BR-ThalitaMultilingualNeural` (fem) |
-| `VOX_EDGE_TIMEOUT` | `10` | Timeout (s) da síntese online antes de cair no fallback |
-
-## F5-TTS (GPU local)
-
-| Chave | Default | Descrição |
-|-------|---------|-----------|
-| `VOX_DEVICE` | `cuda` | `cuda` \| `cpu` (cpu é muito lento) |
-| `VOX_SPEED` | `0.9` | Ritmo da fala (<1 = mais devagar) |
-| `VOX_NFE_STEP` | `32` | Passos de inferência (mais = melhor dicção, mais lento) |
-| `VOX_REF_AUDIO` | — | Áudio de referência ~6-10s (voz do clone) |
-| `VOX_REF_TEXT` | — | Transcrição literal do áudio de referência |
-| `VOX_MODEL` | `F5TTS_Base` | Arquitetura base |
-| `VOX_CKPT` | — | Path do checkpoint pt-br (.safetensors) |
-| `VOX_VOCAB` | — | Path do vocab.txt |
-
-## Piper (offline, sem GPU)
-
-| Chave | Default | Descrição |
-|-------|---------|-----------|
-| `VOX_PIPER_MODEL` | `~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx` | Modelo .onnx |
-| `VOX_PIPER_LENGTH_SCALE` | `1.1` | Ritmo (>1 = mais devagar) |
-
-## Envio / geral
-
-| Chave | Default | Descrição |
-|-------|---------|-----------|
-| `VOX_OPUS_BITRATE` | `32k` | Bitrate do OGG/Opus |
-| `VOX_SEND_TIMEOUT` | `60` | Timeout (s) do upload ao Telegram (rede lenta) |
-| `VOX_MAX_CHARS` | `600` | Teto de chars por chamada (0 desliga) |
-
-## Exemplo de env
-
+```bash
+python3 tools/config.py                      # ver configuração atual
+python3 tools/config.py set <chave> <valor>  # alterar um valor
+python3 tools/config.py reset                # restaurar todos os defaults
 ```
-VOX_BOT_TOKEN=<token>
-VOX_CHAT_ID=<seu_chat_id>
-VOX_ENGINE=auto
-VOX_EDGE_VOICE=pt-BR-FranciscaNeural
-VOX_DEVICE=cuda
-VOX_SPEED=0.87
-VOX_NFE_STEP=48
-VOX_REF_AUDIO=~/.kiro/crew/models/f5-tts/ref/voz_ref.wav
-VOX_REF_TEXT=Esta é uma amostra de voz de referência...
-VOX_CKPT=~/.kiro/crew/models/f5-tts/pt-br/model_last.safetensors
-VOX_VOCAB=~/.kiro/crew/models/f5-tts/F5TTS_Base/vocab.txt
-VOX_PIPER_MODEL=~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx
+
+Override pontual (só na chamada, não persiste no config.json):
+
+```bash
+VOX_ENGINE=f5 bash tools/vox_say.sh "texto"
+```
+
+## Referência completa de chaves
+
+### Engine
+
+| Chave | Default | Valores |
+|-------|---------|---------|
+| `engine` | `auto` | `edge` \| `f5` \| `piper` \| `auto` (tenta edge→f5→piper) |
+
+### Edge-TTS — Microsoft online, sem GPU, precisa de internet
+
+| Chave | Default | Descrição |
+|-------|---------|-----------|
+| `edge_voice` | `pt-BR-AntonioNeural` | Voz: `pt-BR-AntonioNeural` (masc), `pt-BR-FranciscaNeural` (fem), `pt-BR-ThalitaMultilingualNeural` (fem) |
+| `edge_timeout` | `10` | Timeout (s) da síntese antes de cair no fallback |
+
+> Edge-TTS usa o endpoint público do Microsoft Edge browser — gratuito, sem conta Azure.
+
+### F5-TTS — GPU local, voice clone, offline
+
+| Chave | Default | Descrição |
+|-------|---------|-----------|
+| `device` | `cuda` | `cuda` \| `cpu` (cpu muito lento, ~30s+) |
+| `speed` | `0.9` | Ritmo da fala — menor = mais devagar (recomendado: 0.85–0.95) |
+| `nfe_step` | `32` | Passos de inferência — mais = melhor dicção, mais lento (recomendado: 32–48) |
+| `ref_audio` | `~/.kiro/crew/models/f5-tts/ref/voz_ref.wav` | Path do áudio de referência ~6-10s (define o timbre) |
+| `ref_text` | *(frase padrão)* | Transcrição literal do áudio de referência |
+| `f5_ckpt` | `~/.kiro/crew/models/f5-tts/pt-br/model_last.safetensors` | Checkpoint pt-br |
+| `f5_vocab` | `~/.kiro/crew/models/f5-tts/F5TTS_Base/vocab.txt` | Vocabulário |
+
+### Piper — offline, CPU, sem GPU
+
+| Chave | Default | Descrição |
+|-------|---------|-----------|
+| `piper_model` | `~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx` | Model .onnx |
+| `piper_length_scale` | `1.1` | Ritmo — maior = mais devagar |
+
+### Envio / geral
+
+| Chave | Default | Descrição |
+|-------|---------|-----------|
+| `opus_bitrate` | `32k` | Bitrate do OGG/Opus enviado ao Telegram |
+| `send_timeout` | `60` | Timeout (s) do upload ao Telegram (para redes lentas) |
+| `max_chars` | `600` | Teto de chars por chamada (0 = sem limite) |
+
+## Exemplo de config.json mínimo
+
+O arquivo só precisa conter o que foi alterado — o resto usa os defaults:
+
+```json
+{
+  "engine": "edge",
+  "edge_voice": "pt-BR-AntonioNeural",
+  "speed": 0.85
+}
 ```
