@@ -55,19 +55,18 @@ Ver `docs/instalacao.md` para baixar o checkpoint pt-br e gerar o áudio de refe
 
 ## Configuração
 
-**Token e chat_id são lidos automaticamente do Kiro Crew** — nenhum arquivo de configuração extra necessário.
+**Credenciais (token, chat_id) são lidas automaticamente do Kiro Crew** — nenhum arquivo extra necessário.
 
-O `vox_say.py` lê `telegram.bot_token` e `telegram.allowed_user_ids` diretamente do `config.json` do Kiro Crew em cada execução. Se o Telegram estiver configurado no Kiro Crew, a skill funciona sem setup adicional.
+Variáveis de comportamento ficam em `.data/config.json` (gitignored):
 
-Para variáveis opcionais (engine, voz, velocidade), crie `~/.kiro/crew/.secrets/voxlocal.env` (opcional):
-
+```bash
+python3 tools/config.py                          # ver configuração atual
+python3 tools/config.py set engine edge          # trocar engine padrão
+python3 tools/config.py set edge_voice pt-BR-AntonioNeural
+python3 tools/config.py set speed 0.85
 ```
-VOX_ENGINE=auto           # edge | f5 | piper | auto
-VOX_EDGE_VOICE=pt-BR-AntonioNeural
-VOX_SPEED=0.9
-```
 
-Ver `docs/configuracao.md` para a lista completa.
+Ver `docs/configuracao.md` para a lista completa de chaves.
 
 > ⚠️ Verificar que `voice_reply.enabled = false` no `config.json` do Kiro Crew — evita conflito de áudio automático pelo gateway.
 
@@ -83,9 +82,10 @@ bash tools/vox_say.sh --engine edge      # trocar engine padrão
 
 | Script | Uso |
 |--------|-----|
-| `tools/check.py` | Pré-check: valida requisitos (exit 0/1) |
+| `tools/check.py` | Pré-check: valida requisitos + Telegram no Kiro Crew (exit 0/1) |
+| `tools/config.py` | Lê/grava `.data/config.json` (engine, voz, velocidade, paths) |
 | `tools/vox_say.sh` | Wrapper principal: sintetiza e envia voice message |
-| `tools/vox_say.py` | Implementação Python (chamado pelo wrapper) |
+| `tools/vox_say.py` | Implementação Python (lê Kiro Crew + config.json) |
 
 ## Engines
 
@@ -115,12 +115,13 @@ voxlocal/
 ├── .gitignore
 ├── docs/
 │   ├── instalacao.md  # setup detalhado dos 3 engines
-│   ├── configuracao.md # variáveis opcionais de env
+│   ├── configuracao.md # chaves do config.json
 │   └── runbook.md     # troubleshooting e operações
 └── tools/
-    ├── check.py       # pré-check de requisitos
+    ├── check.py       # pré-check de requisitos + Kiro Crew
+    ├── config.py      # lê/grava .data/config.json
     ├── vox_say.sh     # wrapper bash
-    └── vox_say.py     # implementação Python (lê config do Kiro Crew)
+    └── vox_say.py     # implementação Python
 ```
 
 ## Licença
