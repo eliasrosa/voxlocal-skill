@@ -12,11 +12,15 @@ Uso:
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
 DATA_DIR    = Path(__file__).parent.parent / ".data"
 CONFIG_FILE = DATA_DIR / "config.json"
+
+# Diretório base do Kiro Crew — respeita KIROCREW_HOME quando definida
+CREW_HOME = os.environ.get("KIROCREW_HOME") or str(Path.home() / ".kiro/crew")
 
 # Defaults — valores usados quando a chave não está no config.json
 DEFAULTS: dict = {
@@ -29,12 +33,12 @@ DEFAULTS: dict = {
     "opus_bitrate":     "32k",
     "send_timeout":     60,
     "max_chars":        600,             # 0 = sem limite
-    "piper_model":      str(Path.home() / ".kiro/crew/models/piper/pt_BR-faber-medium.onnx"),
+    "piper_model":      os.path.join(CREW_HOME, "models/piper/pt_BR-faber-medium.onnx"),
     "piper_length_scale": 1.1,
-    "ref_audio":        str(Path.home() / ".kiro/crew/models/f5-tts/ref/voz_ref.wav"),
+    "ref_audio":        os.path.join(CREW_HOME, "models/f5-tts/ref/voz_ref.wav"),
     "ref_text":         "Esta é uma amostra de voz de referência para síntese de fala em português.",
-    "f5_ckpt":          str(Path.home() / ".kiro/crew/models/f5-tts/pt-br/model_last.safetensors"),
-    "f5_vocab":         str(Path.home() / ".kiro/crew/models/f5-tts/F5TTS_Base/vocab.txt"),
+    "f5_ckpt":          os.path.join(CREW_HOME, "models/f5-tts/pt-br/model_last.safetensors"),
+    "f5_vocab":         os.path.join(CREW_HOME, "models/f5-tts/F5TTS_Base/vocab.txt"),
 }
 
 HELP: dict = {
