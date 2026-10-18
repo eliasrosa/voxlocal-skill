@@ -1,98 +1,96 @@
 #!/usr/bin/env python3
-"""voxlocal — TTS 100% local com F5-TTS pt-br na GPU, envio via Telegram sendVoice.
+"""voxlocal — TTS local pt-BR com envio via Telegram sendVoice.
 
-Inspirado no LunaSpeak (eliasrosa/luna-speak), porém:
-  - sem serviço HTTP: roda como script sob demanda (invocado pela skill voxlocal);
-  - voz melhor: F5-TTS pt-br (firstpixel/F5-TTS-pt-br) rodando na RTX 4050;
-  - modelo carregado SOB DEMANDA e liberado ao fim (convive com o whisper STT na GPU);
-  - 100% local: nunca bate no ZimaOS/LunaSpeak.
+Suporta 3 engines: F5-TTS local na GPU, Edge-TTS Microsoft online, Piper offline.
 
-Fluxo: texto -> F5-TTS (GPU) -> wav -> ffmpeg OGG/Opus -> Telegram sendVoice.
+Fluxo: texto -> engine escolhido -> wav -> ffmpeg OGG/Opus -> Telegram sendVoice.
 
 Uso:
     vox_say.py "texto do resumo"          # sintetiza e envia a voice message
     vox_say.py --health                   # checa GPU, modelo, ffmpeg, credenciais
     vox_say.py --self-test                # sintetiza uma frase curta e envia
+    vox_say.py --engine edge              # define engine padrão (persiste em config.json)
 
-Credenciais lidas de ~/.kiro/crew/.secrets/voxlocal.env (chmod 600) — nunca via CLI.
-Config do modelo lida do mesmo env (VOX_REF_AUDIO, VOX_REF_TEXT, VOX_DEVICE...).
+Credenciais (token, chat_id) lidas do config do Kiro Crew — nunca via arquivo.
+Config de comportamento lida de .data/config.json via tools/config.py.
 """
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
 import tempfile
 import time
 import uuid
+from pathlib import Path
 
-SECRET_FILE = os.environ.get(
-    "VOX_SECRET_FILE", os.path.expanduser("~/.kiro/crew/.secrets/voxlocal.env")
-)
+# Adiciona o diretório tools/ ao path para importar config.py
+sys.path.insert(0, str(Path(__file__).parent))
+import config as _config_module
 
-CREW_CONFIG = os.path.expanduser("~/.kiro/crew/config.json")
-
-# teto de caracteres: acima disso vira áudio longo e ruim de ouvir (mesma ideia do Luna).
-# 0 desliga. O agente deve quebrar em partes antes de chamar; isto é só o guard-rail.
-SAY_MAX_CHARS = int(os.environ.get("VOX_MAX_CHARS", "600"))
+CREW_CONFIG  = os.path.expanduser("~/.kiro/crew/config.json")
+SAY_MAX_CHARS = 0  # lido do config abaixo
 
 
 def _load_crew_credentials() -> dict:
-    """Lê bot_token e chat_id diretamente do config do Kiro Crew (fonte da verdade).
-    Retorna dict com VOX_BOT_TOKEN e VOX_CHAT_ID, ou vazio se não encontrar."""
+    """Lê bot_token e chat_id diretamente do config do Kiro Crew (fonte da verdade)."""
     try:
-        import json as _json
-        cfg = _json.loads(open(CREW_CONFIG, encoding="utf-8").read())
+        cfg = json.loads(open(CREW_CONFIG, encoding="utf-8").read())
         tg = cfg.get("telegram", {})
-        token = tg.get("bot_token", "")
+        token   = tg.get("bot_token", "")
         allowed = tg.get("allowed_user_ids", [])
         chat_id = str(allowed[0]) if allowed else ""
-        result = {}
-        if token:
-            result["VOX_BOT_TOKEN"] = token
-        if chat_id:
-            result["VOX_CHAT_ID"] = chat_id
-        return result
-    except Exception:
-        return {}
+        if not token:
+            _die("telegram.bot_token não encontrado no config do Kiro Crew.\n"
+                 "Configure o Telegram em Settings > Channels.")
+        if not chat_id:
+            _die("telegram.allowed_user_ids vazio no config do Kiro Crew.\n"
+                 "Configure o Telegram em Settings > Channels.")
+        return {"VOX_BOT_TOKEN": token, "VOX_CHAT_ID": chat_id}
+    except SystemExit:
+        raise
+    except Exception as e:
+        _die(f"Erro ao ler config do Kiro Crew: {e}")
 
 
-def _load_env(path: str) -> dict:
-    """Carrega configuração para o vox_say.
+def _load_config() -> dict:
+    """Monta o dict de configuração completo.
 
     Prioridade (maior para menor):
       1. Variável de ambiente do processo (override pontual: VOX_ENGINE=f5 ...)
-      2. Kiro Crew config.json (fonte da verdade para token e chat_id)
-      3. Arquivo .env em path (valores extras / legado)
+      2. Kiro Crew config.json (credenciais: token e chat_id)
+      3. .data/config.json (variáveis de comportamento com defaults)
+    """
+    # Base: config.json com defaults
+    cfg_data = _config_module.load()
 
-    Credenciais NÃO precisam de arquivo .env — são lidas do Kiro Crew.
-    Se o .env não existir, continua sem erro."""
-    env = {}
+    # Mapeia chaves do config.json para o formato VOX_* esperado internamente
+    env = {
+        "VOX_ENGINE":             str(cfg_data.get("engine",       "auto")),
+        "VOX_EDGE_VOICE":         str(cfg_data.get("edge_voice",   "pt-BR-AntonioNeural")),
+        "VOX_EDGE_TIMEOUT":       str(cfg_data.get("edge_timeout", 10)),
+        "VOX_DEVICE":             str(cfg_data.get("device",       "cuda")),
+        "VOX_SPEED":              str(cfg_data.get("speed",        0.9)),
+        "VOX_NFE_STEP":           str(cfg_data.get("nfe_step",     32)),
+        "VOX_OPUS_BITRATE":       str(cfg_data.get("opus_bitrate", "32k")),
+        "VOX_SEND_TIMEOUT":       str(cfg_data.get("send_timeout", 60)),
+        "VOX_MAX_CHARS":          str(cfg_data.get("max_chars",    600)),
+        "VOX_PIPER_MODEL":        str(cfg_data.get("piper_model",  "")),
+        "VOX_PIPER_LENGTH_SCALE": str(cfg_data.get("piper_length_scale", 1.1)),
+        "VOX_REF_AUDIO":          str(cfg_data.get("ref_audio",   "")),
+        "VOX_REF_TEXT":           str(cfg_data.get("ref_text",    "")),
+        "VOX_CKPT":               str(cfg_data.get("f5_ckpt",     "")),
+        "VOX_VOCAB":              str(cfg_data.get("f5_vocab",    "")),
+    }
 
-    # 3. .env como base (se existir — opcional)
-    if os.path.isfile(path):
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                k, _, v = line.partition("=")
-                k = k.strip()
-                env[k] = v.strip().strip('"').strip("'")
-
-    # 2. Kiro Crew config sobrescreve token/chat_id do .env
+    # Credenciais do Kiro Crew (sobrescrevem qualquer coisa)
     env.update(_load_crew_credentials())
 
-    # 1. Env vars do processo têm precedência final
+    # Env vars do processo têm precedência final (override pontual)
     for k in list(env.keys()):
         if k in os.environ:
             env[k] = os.environ[k]
-
-    # Credenciais obrigatórias — falha com mensagem clara
-    if not env.get("VOX_BOT_TOKEN"):
-        _die("VOX_BOT_TOKEN não encontrado. Configure o Telegram em Settings > Channels no Kiro Crew.")
-    if not env.get("VOX_CHAT_ID"):
-        _die("VOX_CHAT_ID não encontrado. Configure o Telegram em Settings > Channels no Kiro Crew.")
 
     return env
 
@@ -101,19 +99,6 @@ def _die(msg: str, code: int = 1):
     print(f"ERRO: {msg}", file=sys.stderr)
     sys.exit(code)
 
-
-def _set_env_key(path: str, key: str, value: str) -> None:
-    """Grava/atualiza KEY=VALUE no arquivo .env, preservando as demais linhas."""
-    lines = open(path, encoding="utf-8").read().splitlines() if os.path.isfile(path) else []
-    out, found = [], False
-    for ln in lines:
-        if ln.startswith(f"{key}="):
-            out.append(f"{key}={value}"); found = True
-        else:
-            out.append(ln)
-    if not found:
-        out.append(f"{key}={value}")
-    open(path, "w", encoding="utf-8").write("\n".join(out) + "\n")
 
 
 def _to_ogg(src_wav: str, dst_ogg: str, bitrate: str = "32k") -> None:
@@ -341,13 +326,13 @@ def cmd_health(cfg: dict) -> None:
     ref = cfg.get("VOX_REF_AUDIO", "")
     print(f"ref_audio: {'ok ' + ref if os.path.isfile(ref) else 'AUSENTE ' + repr(ref)}")
     # credenciais (só presença, nunca valor)
-    print(f"bot_token: {'ok' if (cfg.get('VOX_BOT_TOKEN') or cfg.get('LUNA_BOT_TOKEN')) else 'AUSENTE'}")
-    print(f"chat_id:   {'ok' if (cfg.get('VOX_CHAT_ID') or cfg.get('LUNA_CHAT_ID')) else 'AUSENTE'}")
+    print(f"bot_token: {'ok' if cfg.get('VOX_BOT_TOKEN') else 'AUSENTE'}")
+    print(f"chat_id:   {'ok' if cfg.get('VOX_CHAT_ID') else 'AUSENTE'}")
 
 
 def main() -> None:
     args = sys.argv[1:]
-    cfg = _load_env(SECRET_FILE)
+    cfg = _load_config()
 
     if not args or args[0] in ("-h", "--help"):
         print(__doc__)
@@ -356,14 +341,17 @@ def main() -> None:
         cmd_health(cfg)
         return
     if args[0] == "--engine":
-        # persiste VOX_ENGINE no env (edge|f5|auto), estilo --mode do LunaSpeak
+        # persiste engine no config.json via config.py
         if len(args) < 2 or args[1] not in ("edge", "f5", "piper", "auto"):
             _die("uso: --engine edge|f5|piper|auto", 4)
-        _set_env_key(SECRET_FILE, "VOX_ENGINE", args[1])
-        print(f"VOX_ENGINE = {args[1]} (persistido)")
+        import config as _cfg
+        c = _cfg.load()
+        c["engine"] = args[1]
+        _cfg.save(c)
+        print(f"engine = {args[1]} (persistido em .data/config.json)")
         return
     if args[0] == "--self-test":
-        cmd_say("Teste do voxlocal, síntese local na GPU.", cfg)
+        cmd_say("Teste do voxlocal, síntese de voz funcionando.", cfg)
         return
     cmd_say(args[0], cfg)
 

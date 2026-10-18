@@ -12,14 +12,6 @@ import sys
 from pathlib import Path
 
 ok = True
-env_file = Path.home() / ".kiro/crew/.secrets/voxlocal.env"
-env_vars = {}
-if env_file.exists():
-    for line in env_file.read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k, _, v = line.partition("=")
-            env_vars[k.strip()] = v.strip()
 
 
 def check(label: str, result: bool, fix: str = "") -> None:
@@ -52,14 +44,24 @@ if venv_ok:
         check(f"{pkg} instalado", r.returncode == 0,
               f"~/.kiro/crew-venv-current/bin/pip3 install {pkg}")
 
-# --- Credenciais ---
-print("\nCredenciais (.secrets/voxlocal.env):")
-has_token = bool(env_vars.get("VOX_BOT_TOKEN") or env_vars.get("LUNA_BOT_TOKEN"))
-has_chat  = bool(env_vars.get("VOX_CHAT_ID")   or env_vars.get("LUNA_CHAT_ID"))
-check("VOX_BOT_TOKEN configurado", has_token,
-      f"Edite {env_file} e adicione VOX_BOT_TOKEN=<token do @BotFather>")
-check("VOX_CHAT_ID configurado", has_chat,
-      f"Edite {env_file} e adicione VOX_CHAT_ID=<seu chat_id no Telegram>")
+# --- Credenciais via Kiro Crew ---
+print("\nKiro Crew (credenciais):")
+try:
+    import json as _json
+    crew_cfg = _json.loads(open(Path.home() / ".kiro/crew/config.json").read())
+    tg = crew_cfg.get("telegram", {})
+    has_token   = bool(tg.get("bot_token", ""))
+    has_chat_id = bool(tg.get("allowed_user_ids", []))
+    check("telegram.bot_token configurado", has_token,
+          "Configure o Telegram em Settings > Channels no Kiro Crew")
+    check("telegram.allowed_user_ids configurado", has_chat_id,
+          "Configure o Telegram em Settings > Channels no Kiro Crew")
+    voice_reply_on = crew_cfg.get("voice_reply", {}).get("enabled", False)
+    if voice_reply_on:
+        print("  ⚠️  voice_reply.enabled = true — pode gerar áudio automático duplicado")
+        print("     Recomendado: voice_reply.enabled = false no config.json do Kiro Crew")
+except Exception as e:
+    check("config.json do Kiro Crew acessível", False, str(e))
 
 # --- Modelos ---
 print("\nModelos:")
