@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
-# vox_say.sh — wrapper da skill voxlocal (TTS local F5-TTS pt-br na GPU + Telegram).
-#
-# O agente chama apenas:  vox_say.sh "texto do resumo"
-# Credenciais e config do modelo são lidas de ~/.kiro/crew/.secrets/voxlocal.env
-# (nunca passam pela linha de comando, então não vazam no chat).
+# vox_say.sh — wrapper da skill voxlocal (TTS pt-BR para Telegram).
 #
 # Uso:
-#   vox_say.sh "texto"        -> sintetiza na GPU e envia a voice message ao Telegram
-#   vox_say.sh --health       -> checa GPU/torch/f5-tts/ffmpeg/credenciais
-#   vox_say.sh --self-test    -> sintetiza uma frase curta e envia
+#   vox_say.sh "texto"        # sintetiza e envia voice message ao Telegram
+#   vox_say.sh --health       # diagnóstico: ffmpeg, pacotes, Kiro Crew, modelos
+#   vox_say.sh --self-test    # sintetiza uma frase curta e envia
+#   vox_say.sh --engine edge  # troca engine padrão (edge|f5|piper|auto)
 #
-# Roda o vox_say.py com o Python do venv do Kiro Crew (onde torch+f5-tts ficam).
+# Credenciais (token, chat_id) lidas do Kiro Crew automaticamente.
+# Configuração de comportamento em .data/config.json — ver tools/config.py.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Python do venv real do Kiro Crew (tem torch/f5-tts). Fallback pro python3 do PATH.
-VOX_PYTHON="${VOX_PYTHON:-/home/elias/.kiro/crew-venv-current/bin/python3}"
+# Python do venv do Kiro Crew (onde torch/f5-tts/edge-tts/piper-tts ficam).
+# Sobrescreva VOX_PYTHON para usar outro interpretador.
+VOX_PYTHON="${VOX_PYTHON:-~/.kiro/crew-venv-current/bin/python3}"
+VOX_PYTHON="${VOX_PYTHON/#\~/$HOME}"   # expande ~ manualmente (não expandida em aspas)
+
 if [[ ! -x "$VOX_PYTHON" ]]; then
   VOX_PYTHON="$(command -v python3)"
 fi
