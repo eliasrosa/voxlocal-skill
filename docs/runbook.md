@@ -42,13 +42,23 @@ python3 tools/config.py set piper_length_scale 1.2  # mais devagar (>1)
 
 ## Trocar a voz de referência do F5 (voice clone)
 
+Ver `docs/f5-voice-clone.md` para explicação completa de como funciona o voice clone.
+
+**Forma rápida — script interativo:**
 ```bash
-# Configurar nova referência
+python3 tools/set_voice.py                      # interativo: informa o arquivo e a transcrição
+python3 tools/set_voice.py /path/para/voz.wav   # arquivo já pronto
+python3 tools/set_voice.py --piper              # gera ref sintética com Piper (sem microfone)
+python3 tools/set_voice.py --show               # mostra config atual
+```
+
+**Forma manual:**
+```bash
 python3 tools/config.py set ref_audio "/caminho/para/nova_ref.wav"   # ~6-10s
 python3 tools/config.py set ref_text  "transcrição literal do áudio"
 ```
 
-Voz humana real melhora muito a dicção vs. a referência gerada por Piper.
+Voz humana real (~10s limpos, ambiente silencioso) dá muito mais qualidade do que referência gerada por Piper.
 
 ## Verificar configuração atual
 
