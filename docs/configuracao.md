@@ -29,8 +29,16 @@ VOX_ENGINE=f5 python3 tools/vox_say.py "texto"
 
 | Chave | Default | Descrição |
 |-------|---------|-----------|
-| `edge_voice` | `pt-BR-AntonioNeural` | Voz: `pt-BR-AntonioNeural` (masc), `pt-BR-FranciscaNeural` (fem), `pt-BR-ThalitaMultilingualNeural` (fem) |
+| `edge_voice` | `pt-BR-AntonioNeural` | Voz pt-BR a usar (ver tabela abaixo) |
 | `edge_timeout` | `10` | Timeout (s) da síntese antes de cair no fallback |
+
+**Vozes pt-BR disponíveis:**
+
+| Voz | Gênero | Personalidade |
+|-----|--------|---------------|
+| `pt-BR-AntonioNeural` | Masculina | Friendly, Positive |
+| `pt-BR-FranciscaNeural` | Feminina | Friendly, Positive |
+| `pt-BR-ThalitaMultilingualNeural` | Feminina | Friendly, Positive |
 
 > Edge-TTS usa o endpoint público do Microsoft Edge browser — gratuito, sem conta Azure.
 
