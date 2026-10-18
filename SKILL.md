@@ -19,15 +19,15 @@ Skill de síntese de voz com 3 engines. Envia voice message diretamente no Teleg
 ## Comando
 
 ```bash
-bash ~/.kiro/skills/voxlocal/tools/vox_say.sh "texto aqui"
+python3 ~/.kiro/skills/voxlocal/tools/vox_say.py "texto aqui"
 ```
 
 Outros modos:
 
 ```bash
-bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --health      # diagnóstico completo
-bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --self-test   # envia frase de teste
-bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --engine edge # troca engine padrão
+python3 ~/.kiro/skills/voxlocal/tools/vox_say.py --health      # diagnóstico completo
+python3 ~/.kiro/skills/voxlocal/tools/vox_say.py --self-test   # envia frase de teste
+python3 ~/.kiro/skills/voxlocal/tools/vox_say.py --engine edge # troca engine padrão
 ```
 
 ## Engines
@@ -45,13 +45,13 @@ bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --engine edge # troca engine padr�
 Trocar engine padrão (persiste em `.data/config.json`):
 
 ```bash
-bash ~/.kiro/skills/voxlocal/tools/vox_say.sh --engine edge   # ou f5 | piper | auto
+python3 ~/.kiro/skills/voxlocal/tools/vox_say.py --engine edge   # ou f5 | piper | auto
 ```
 
 Override pontual (só na chamada, não persiste):
 
 ```bash
-VOX_ENGINE=f5 bash ~/.kiro/skills/voxlocal/tools/vox_say.sh "texto"
+VOX_ENGINE=f5 python3 ~/.kiro/skills/voxlocal/tools/vox_say.py "texto"
 ```
 
 ## Configuração

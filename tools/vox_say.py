@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# Re-exec automático para o venv do Kiro Crew — deve ficar ANTES de qualquer import
+# de pacote pesado (torch, f5-tts, edge-tts), pois eles só existem no venv.
+import os as _os, sys as _sys
+_VENV_PY = _os.path.expanduser("~/.kiro/crew-venv-current/bin/python3")
+if _os.path.isfile(_VENV_PY) and not _sys.executable.startswith(
+    _os.path.expanduser("~/.kiro/crew")
+):
+    _os.execv(_VENV_PY, [_VENV_PY] + _sys.argv)
+
 """voxlocal — TTS local pt-BR com envio via Telegram sendVoice.
 
 Suporta 3 engines: F5-TTS local na GPU, Edge-TTS Microsoft online, Piper offline.
@@ -6,10 +15,10 @@ Suporta 3 engines: F5-TTS local na GPU, Edge-TTS Microsoft online, Piper offline
 Fluxo: texto -> engine escolhido -> wav -> ffmpeg OGG/Opus -> Telegram sendVoice.
 
 Uso:
-    vox_say.py "texto do resumo"          # sintetiza e envia a voice message
-    vox_say.py --health                   # checa GPU, modelo, ffmpeg, credenciais
-    vox_say.py --self-test                # sintetiza uma frase curta e envia
-    vox_say.py --engine edge              # define engine padrão (persiste em config.json)
+    python3 vox_say.py "texto do resumo"   # sintetiza e envia a voice message
+    python3 vox_say.py --health            # checa GPU, modelo, ffmpeg, credenciais
+    python3 vox_say.py --self-test         # sintetiza uma frase curta e envia
+    python3 vox_say.py --engine edge       # define engine padrão (persiste em config.json)
 
 Credenciais (token, chat_id) lidas do config do Kiro Crew — nunca via arquivo.
 Config de comportamento lida de .data/config.json via tools/config.py.

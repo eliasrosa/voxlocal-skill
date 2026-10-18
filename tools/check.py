@@ -171,7 +171,7 @@ if engine in ("f5", "auto") and venv_ok:
 print()
 if ok:
     print("✓ Todos os requisitos satisfeitos.")
-    print("  Execute: bash tools/vox_say.sh --health  (teste de síntese completo)")
+    print("  Execute: python3 tools/vox_say.py --health  (teste de síntese completo)")
 else:
     print("✗ Corrija os itens acima antes de usar a skill.")
     sys.exit(1)

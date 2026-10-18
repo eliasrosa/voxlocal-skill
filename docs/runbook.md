@@ -5,16 +5,16 @@ Procedimentos operacionais e troubleshooting.
 ## Trocar o engine padrão
 
 ```bash
-bash tools/vox_say.sh --engine edge    # Microsoft online (sem GPU, precisa de rede)
-bash tools/vox_say.sh --engine f5      # F5-TTS local na GPU
-bash tools/vox_say.sh --engine piper   # Piper offline na CPU
-bash tools/vox_say.sh --engine auto    # híbrido edge→f5→piper (default)
+python3 tools/vox_say.py --engine edge    # Microsoft online (sem GPU, precisa de rede)
+python3 tools/vox_say.py --engine f5      # F5-TTS local na GPU
+python3 tools/vox_say.py --engine piper   # Piper offline na CPU
+python3 tools/vox_say.py --engine auto    # híbrido edge→f5→piper (default)
 ```
 
 Override pontual sem persistir:
 
 ```bash
-VOX_ENGINE=piper bash tools/vox_say.sh "texto"
+VOX_ENGINE=piper python3 tools/vox_say.py "texto"
 ```
 
 ## Trocar a voz do Edge
@@ -80,7 +80,7 @@ watch -n 1 nvidia-smi   # VRAM sobe ~1.2-3GB durante a síntese e libera ao fim
 ## Health check completo
 
 ```bash
-bash tools/vox_say.sh --health
+python3 tools/vox_say.py --health
 ```
 
 Deve listar: ffmpeg ok, torch cuda_available=True (se GPU), f5-tts ok, edge-tts ok,

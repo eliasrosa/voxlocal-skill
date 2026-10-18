@@ -93,19 +93,19 @@ Ver `docs/configuracao.md` para a referência completa de chaves.
 
 ```bash
 # Sintetizar e enviar voice message
-bash tools/vox_say.sh "texto aqui"
+python3 tools/vox_say.py "texto aqui"
 
 # Diagnóstico completo (ffmpeg, pacotes, Kiro Crew, modelos)
-bash tools/vox_say.sh --health
+python3 tools/vox_say.py --health
 
 # Enviar frase de teste
-bash tools/vox_say.sh --self-test
+python3 tools/vox_say.py --self-test
 
 # Trocar engine padrão (persiste em .data/config.json)
-bash tools/vox_say.sh --engine edge     # ou f5 | piper | auto
+python3 tools/vox_say.py --engine edge     # ou f5 | piper | auto
 
 # Override pontual sem persistir
-VOX_ENGINE=f5 bash tools/vox_say.sh "texto"
+VOX_ENGINE=f5 python3 tools/vox_say.py "texto"
 ```
 
 ## Ferramentas
@@ -114,7 +114,7 @@ VOX_ENGINE=f5 bash tools/vox_say.sh "texto"
 |--------|-----|
 | `tools/check.py` | Pré-check: valida requisitos + Telegram no Kiro Crew (exit 0/1) |
 | `tools/config.py` | Lê/grava `.data/config.json` |
-| `tools/vox_say.sh` | Wrapper principal: sintetiza e envia voice message |
+| `tools/vox_say.py` | Script principal: sintetiza e envia voice message (auto-seleciona venv) |
 | `tools/vox_say.py` | Implementação Python |
 
 ## Compatibilidade
@@ -140,8 +140,7 @@ voxlocal/
 └── tools/
     ├── check.py        # pré-check de requisitos (exit 0/1)
     ├── config.py       # lê/grava .data/config.json
-    ├── vox_say.sh      # wrapper bash (ponto de entrada)
-    └── vox_say.py      # implementação Python
+    └── vox_say.py      # script principal (auto-seleciona venv do Kiro Crew via re-exec)
 ```
 
 ## Licença
