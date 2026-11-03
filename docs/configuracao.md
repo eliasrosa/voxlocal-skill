@@ -53,6 +53,7 @@ VOX_ENGINE=f5 python3 tools/vox_say.py "texto"
 | `ref_text` | *(frase padrão)* | Transcrição literal do áudio de referência |
 | `f5_ckpt` | `~/.kiro/crew/models/f5-tts/pt-br/model_last.safetensors` | Checkpoint pt-br |
 | `f5_vocab` | `~/.kiro/crew/models/f5-tts/F5TTS_Base/vocab.txt` | Vocabulário |
+| `install_f5` | `false` | `true` = o `tools/install.py` (e o crew-setup) reinstala o F5-TTS a cada update do Kiro Crew. O `install.py --f5` grava `true` |
 
 ### Piper — offline, CPU, sem GPU
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 # Re-exec automático para o venv do Kiro Crew — deve ficar ANTES de qualquer import
 # de pacote pesado (torch, f5-tts, edge-tts), pois eles só existem no venv.
 import os as _os, sys as _sys
@@ -23,7 +24,6 @@ Uso:
 Credenciais (token, chat_id) lidas do config do Kiro Crew — nunca via arquivo.
 Config de comportamento lida de .data/config.json via tools/config.py.
 """
-from __future__ import annotations
 
 import json
 import os
@@ -210,7 +210,7 @@ def _synth_f5(text: str, wav_out: str, cfg: dict) -> None:
     try:
         f5_api = import_module("f5_tts.api")
     except ModuleNotFoundError:
-        _die("f5-tts não instalado no venv. Rode o pip install (ver SKILL.md).")
+        _die("f5-tts não instalado no venv. Rode: python3 tools/install.py --f5")
 
     # F5TTS() baixa/carrega o checkpoint pt-br. Carregado aqui, some ao retornar (GC).
     f5 = f5_api.F5TTS(
@@ -311,26 +311,26 @@ def cmd_health(cfg: dict) -> None:
         if torch.cuda.is_available():
             print(f"gpu: {torch.cuda.get_device_name(0)}")
     except ModuleNotFoundError:
-        print("torch: AUSENTE (rode o pip install — ver SKILL.md)")
+        print("torch: AUSENTE (opcional, F5-TTS: python3 tools/install.py --f5)")
     # f5-tts
     try:
         import f5_tts  # noqa: F401
         print("f5-tts: ok")
     except ModuleNotFoundError:
-        print("f5-tts: AUSENTE (rode o pip install — ver SKILL.md)")
+        print("f5-tts: AUSENTE (opcional: python3 tools/install.py --f5)")
     # edge-tts (Microsoft online)
     try:
         import edge_tts  # noqa: F401
         print(f"edge-tts: ok  voice={cfg.get('VOX_EDGE_VOICE','pt-BR-FranciscaNeural')}")
     except ModuleNotFoundError:
-        print("edge-tts: AUSENTE (pip install edge-tts)")
+        print("edge-tts: AUSENTE (rode: python3 tools/install.py)")
     # piper (offline, sem GPU)
     try:
         import piper  # noqa: F401
         pm = cfg.get("VOX_PIPER_MODEL", os.path.join(CREW_HOME, "models/piper/pt_BR-faber-medium.onnx"))
         print(f"piper: ok  model={'ok' if os.path.isfile(pm) else 'AUSENTE ' + pm}")
     except ModuleNotFoundError:
-        print("piper: AUSENTE (pip install piper-tts)")
+        print("piper: AUSENTE (rode: python3 tools/install.py)")
     print(f"engine (VOX_ENGINE): {cfg.get('VOX_ENGINE','auto')}")
     # referência de voz
     ref = cfg.get("VOX_REF_AUDIO", "")

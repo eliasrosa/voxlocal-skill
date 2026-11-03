@@ -67,20 +67,10 @@ python3 tools/set_voice.py
 ### Opção C — gerar referência com Piper (sem microfone)
 
 Cria uma referência sintética usando a voz faber do Piper. Resultado funcional mas menos natural.
+O script gera o `.wav`, grava `ref_audio` e `ref_text` e confere o arquivo:
 
 ```bash
-CREW_HOME="${KIROCREW_HOME:-$HOME/.kiro/crew}"
-VPY=~/.kiro/crew-venv-current/bin/python3
-FRASE="Esta é uma amostra de voz de referência para síntese de fala em português."
-REF="$CREW_HOME/models/f5-tts/ref/voz_ref.wav"
-
-mkdir -p "$(dirname $REF)"
-echo "$FRASE" | $VPY -m piper \
-  --model "$CREW_HOME/models/piper/pt_BR-faber-medium.onnx" \
-  --output_file "$REF"
-
-python3 tools/config.py set ref_audio "$REF"
-python3 tools/config.py set ref_text  "$FRASE"
+python3 tools/set_voice.py --piper
 ```
 
 ---
@@ -111,7 +101,8 @@ O checkpoint usado é o `firstpixel/F5-TTS-pt-br` — fine-tuned em português b
 | `pt-br/model_last.safetensors` | ~1.35GB | Checkpoint pt-br (pesos do modelo) |
 | `F5TTS_Base/vocab.txt` | ~KB | Vocabulário (fonemas pt-br) |
 
-Os modelos ficam em `$CREW_HOME/models/f5-tts/` — fora do venv, não somem no auto-update.
+Os modelos ficam em `$CREW_HOME/models/f5-tts/` — fora do venv, não somem no update do Kiro Crew.
+Os pacotes (torch, f5-tts) somem: com `install_f5 = true`, o `tools/install.py` os reinstala.
 
 ---
 

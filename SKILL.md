@@ -10,9 +10,8 @@ Skill de síntese de voz com 3 engines. Envia voice message diretamente no Teleg
 
 ## Regras de uso
 
-- **Só no Telegram, só sob demanda** — quando o usuário pedir áudio explicitamente.
-- **NUNCA** enviar automaticamente sem pedido.
-- No **dashboard** NÃO usar — o dashboard usa o Piper nativo do Kiro Crew.
+- **Só no Telegram.** No dashboard não usar: ele tem o TTS nativo do Kiro Crew (`voice_reply.provider`).
+- **Quando enviar** (sob demanda ou proativo) é regra do usuário, definida no steering dele. Sem essa regra, enviar só quando o usuário pedir áudio.
 - Teto de **600 chars** por chamada. Resposta longa → quebrar em 2-3 partes em sequência.
 - Texto sem markdown, URL ou código. Ideal ~350-450 chars por áudio.
 
@@ -93,6 +92,7 @@ python3 ~/.kiro/skills/voxlocal/tools/config.py set speed 0.85
 | `ref_text` | *(ver instalação)* | Transcrição literal do áudio de referência |
 | `f5_ckpt` | *(ver instalação)* | Path do checkpoint pt-br (.safetensors) |
 | `f5_vocab` | *(ver instalação)* | Path do vocab.txt |
+| `install_f5` | `false` | `true` = o `install.py` reinstala o F5-TTS a cada update (`install.py --f5` grava) |
 
 **Piper (offline, CPU):**
 
@@ -117,67 +117,36 @@ python3 ~/.kiro/skills/voxlocal/tools/check.py
 
 Valida: ffmpeg, Python 3.10+, pacotes no venv, Telegram configurado no Kiro Crew, modelos presentes.
 
-## Instalação de engines
-
-**Mínimo (edge + piper, sem GPU):**
+## Instalação
 
 ```bash
-VP=~/.kiro/crew-venv-current/bin/pip3
-$VP install edge-tts piper-tts httpx
+python3 ~/.kiro/skills/voxlocal/tools/install.py          # edge + piper (baixa a voz pt-BR do Piper)
+python3 ~/.kiro/skills/voxlocal/tools/install.py --f5     # inclui o F5-TTS (opt-in, ~2,5 GB)
+python3 ~/.kiro/skills/voxlocal/tools/install.py --dry-run
 ```
 
-Baixar modelo Piper pt-BR (~60MB):
+O update do Kiro Crew recria o venv e apaga esses pacotes. A skill `crew-setup` roda o
+`install.py` sozinha depois do update quando a voxlocal está vinculada; sem ela, rode o
+comando acima. O `install.py` também desliga o áudio nativo do gateway no Telegram
+(`voice_reply.enabled` e `telegram.voice_replies`), que duplicaria o da voxlocal.
 
-```bash
-mkdir -p ~/.kiro/crew/models/piper && cd ~/.kiro/crew/models/piper
-curl -fsSL -O https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx
-curl -fsSL -O https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json
-```
-
-**Completo (+ F5-TTS na GPU, ~3GB VRAM):**
-
-```bash
-VP=~/.kiro/crew-venv-current/bin/pip3
-$VP install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
-$VP install f5-tts
-```
-
-Baixar checkpoint pt-br e gerar áudio de referência:
-
-```bash
-VPY=~/.kiro/crew-venv-current/bin/python3
-$VPY -c "
-from huggingface_hub import hf_hub_download
-import os; d = os.path.expanduser('~/.kiro/crew/models/f5-tts')
-hf_hub_download('firstpixel/F5-TTS-pt-br','pt-br/model_last.safetensors',local_dir=d)
-hf_hub_download('SWivid/F5-TTS','F5TTS_Base/vocab.txt',local_dir=d)
-"
-# Gerar áudio de referência com Piper faber
-FRASE="Esta é uma amostra de voz de referência para síntese de fala em português."
-REF=~/.kiro/crew/models/f5-tts/ref/voz_ref.wav
-mkdir -p "$(dirname $REF)"
-echo "$FRASE" | $VPY -m piper \
-  --model ~/.kiro/crew/models/piper/pt_BR-faber-medium.onnx \
-  --output_file "$REF"
-# Configurar os paths
-python3 ~/.kiro/skills/voxlocal/tools/config.py set ref_audio "$REF"
-python3 ~/.kiro/skills/voxlocal/tools/config.py set ref_text "$FRASE"
-```
-
-> Trocar por voz humana depois: gravar ~10s limpos, salvar no path de `ref_audio`, atualizar `ref_text` com a transcrição literal.
+O F5-TTS é opt-in porque traz ~128 pacotes (torch incluso) para o venv do próprio Kiro
+Crew e pode trocar versões que o Crew usa. Checkpoint pt-br e voz de referência:
+`docs/instalacao.md`.
 
 ## Erros Comuns
 
 | Sintoma | Causa | Correção |
 |---------|-------|----------|
 | `telegram.bot_token não encontrado` | Telegram não configurado no Kiro Crew | Settings > Channels > Telegram |
-| `torch: AUSENTE` / `f5-tts: AUSENTE` | venv recriado no auto-update | reinstalar (ver Instalação acima) |
-| STT roda mas na CPU | `device=cpu` ou VRAM insuficiente | `config.py set device cuda` |
+| `piper: AUSENTE` / `edge-tts: AUSENTE` | venv recriado no update do Kiro Crew | `python3 tools/install.py` (ou o `crew-setup`) |
+| `torch: AUSENTE` / `f5-tts: AUSENTE` | F5-TTS não instalado (é opt-in) | `python3 tools/install.py --f5`; o `auto` funciona sem ele |
+| F5 roda na CPU (lento) | `device=cpu` ou VRAM insuficiente | `config.py set device cuda` |
 | `edge falhou ... fallback` | sem internet | esperado no `auto`; usa F5/Piper |
 | áudio muito rápido (F5) | speed alto | `config.py set speed 0.85` |
 | dicção robótica (F5) | ref gerada por Piper | gravar ref de voz humana + `nfe_step 48` |
 | OOM na GPU | F5 + whisper STT juntos | F5 é sob demanda; se persistir usar `--engine piper` |
-| `.wav` automático chegando | `voice_reply.enabled=true` no Kiro Crew | `config.json` do Kiro Crew: `voice_reply.enabled=false` |
+| `.wav` automático chegando | `voice_reply.enabled` ou `telegram.voice_replies` = true no Kiro Crew | `python3 tools/install.py` desliga os dois |
 
 ## Notas
 
