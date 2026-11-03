@@ -72,13 +72,14 @@ python3 tools/config.py reset   # restaurar defaults
 | Sintoma | Causa provável | Fix |
 |---------|----------------|-----|
 | `telegram.bot_token não encontrado` | Telegram não configurado no Kiro Crew | Settings > Channels > Telegram |
-| `torch: AUSENTE` / `f5-tts: AUSENTE` | venv recriado no auto-update | reinstalar — ver `docs/instalacao.md` |
+| `piper: AUSENTE` / `edge-tts: AUSENTE` | venv recriado no update do Kiro Crew | `python3 tools/install.py` |
+| `torch: AUSENTE` / `f5-tts: AUSENTE` | F5-TTS é opt-in e some no update | `python3 tools/install.py --f5` (grava `install_f5` para os próximos updates) |
 | `httpx.ReadTimeout` no envio | rede lenta no upload | `config.py set send_timeout 120` |
 | `edge falhou ... fallback` | sem internet | esperado no `auto`; usa F5/Piper |
 | áudio muito rápido (F5) | speed alto | `config.py set speed 0.85` |
 | dicção robótica (F5) | ref gerada por Piper | usar ref de voz humana real + `config.py set nfe_step 48` |
 | OOM na GPU | F5 + whisper STT juntos ao mesmo tempo | F5 carrega sob demanda; se persistir usar `--engine piper` ou `edge` |
-| `.wav` chegando automaticamente no Telegram | `voice_reply.enabled=true` no Kiro Crew | `config.json` do Kiro Crew: `voice_reply.enabled=false` e `telegram.voice_replies=false` |
+| `.wav` chegando automaticamente no Telegram | `voice_reply.enabled` ou `telegram.voice_replies` = true no Kiro Crew | `python3 tools/install.py` desliga os dois |
 | GPU incompatível com F5-TTS | compute capability < 7.0 | `python3 tools/check.py` para diagnóstico; usar `--engine edge` |
 
 ## Verificar uso de GPU durante síntese

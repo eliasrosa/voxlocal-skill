@@ -36,9 +36,8 @@ python3 tools/config.py set edge_voice pt-BR-FranciscaNeural
 | `ffmpeg` | Ferramenta | `sudo apt install ffmpeg` |
 | Venv do Kiro Crew | Runtime | `~/.kiro/crew-venv-current/` |
 | Telegram configurado no Kiro Crew | Credencial | Settings > Channels > Telegram |
-| `edge-tts` + `httpx` | Pacote Python | ver Instalação — engine `edge` |
-| `piper-tts` | Pacote Python | ver Instalação — engine `piper` |
-| `torch` + `f5-tts` | Pacote Python | ver Instalação — engine `f5` (GPU) |
+| `edge-tts`, `httpx`, `piper-tts` + voz Piper pt-BR | Pacotes + modelo | `python3 tools/install.py` |
+| `torch` + `f5-tts` (opcional) | Pacotes | `python3 tools/install.py --f5` |
 
 Verificar tudo:
 
@@ -50,32 +49,18 @@ python3 tools/check.py
 
 ```bash
 git clone https://github.com/eliasrosa/voxlocal-skill ~/.kiro/skills/voxlocal
+python3 ~/.kiro/skills/voxlocal/tools/install.py
 ```
 
-### Mínimo — edge + piper, sem GPU
+O `install.py` instala no venv do Kiro Crew os pacotes que faltam, baixa a voz pt-BR do
+Piper (~60 MB) e desliga o áudio nativo do gateway no Telegram, que duplicaria o da
+voxlocal. É idempotente: rode de novo depois de cada update do Kiro Crew, que recria o
+venv. A skill [crew-setup](https://github.com/eliasrosa/kirocrew-setup-skill) faz isso
+sozinha quando a voxlocal está vinculada.
 
-```bash
-VP=~/.kiro/crew-venv-current/bin/pip3
-$VP install edge-tts piper-tts httpx
-```
-
-Baixar modelo Piper pt-BR (~60MB):
-
-```bash
-mkdir -p ~/.kiro/crew/models/piper && cd ~/.kiro/crew/models/piper
-curl -fsSL -O https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx
-curl -fsSL -O https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json
-```
-
-### Completo — adiciona F5-TTS na GPU (~3GB VRAM)
-
-```bash
-VP=~/.kiro/crew-venv-current/bin/pip3
-$VP install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
-$VP install f5-tts
-```
-
-Ver `docs/instalacao.md` para baixar o checkpoint pt-br e gerar o áudio de referência do voice clone.
+O F5-TTS (voice clone na GPU) é opt-in: `python3 tools/install.py --f5`. Ele traz ~128
+pacotes (~2,5 GB, torch incluso) para o venv do Kiro Crew. Checkpoint pt-br e voz de
+referência: `docs/instalacao.md`.
 
 ## Configuração
 
@@ -99,7 +84,7 @@ O arquivo `.data/config.json` só precisa conter o que foi alterado — o resto 
 
 Ver `docs/configuracao.md` para a referência completa de chaves.
 
-> ⚠️ Verificar que `voice_reply.enabled = false` no `config.json` do Kiro Crew para evitar conflito de áudio automático pelo gateway.
+> ⚠️ `voice_reply.enabled` e `telegram.voice_replies` precisam ficar `false` no Kiro Crew, senão o gateway também manda áudio. O `install.py` desliga os dois e o `check.py` avisa se voltarem.
 
 ## Uso
 
@@ -125,10 +110,10 @@ VOX_ENGINE=f5 python3 tools/vox_say.py "texto"
 | Script | Uso |
 |--------|-----|
 | `tools/check.py` | Pré-check: valida requisitos + Telegram no Kiro Crew (exit 0/1) |
+| `tools/install.py` | Instala/restaura pacotes e a voz Piper no venv do Kiro Crew (idempotente; `--f5`, `--dry-run`) |
 | `tools/config.py` | Lê/grava `.data/config.json` |
 | `tools/set_voice.py` | Configura a voz de referência do F5-TTS (interativo ou `--piper`) |
 | `tools/vox_say.py` | Script principal: sintetiza e envia voice message (auto-seleciona venv) |
-| `tools/vox_say.py` | Implementação Python |
 
 ## Compatibilidade
 
@@ -153,6 +138,7 @@ voxlocal/
 │   └── runbook.md      # troubleshooting e operações do dia a dia
 └── tools/
     ├── check.py        # pré-check de requisitos (exit 0/1)
+    ├── install.py      # instala/restaura dependências no venv do Kiro Crew
     ├── config.py       # lê/grava .data/config.json
     ├── set_voice.py    # configura voz de referência do F5-TTS
     └── vox_say.py      # script principal (auto-seleciona venv do Kiro Crew via re-exec)

@@ -39,6 +39,7 @@ DEFAULTS: dict = {
     "ref_text":         "Esta é uma amostra de voz de referência para síntese de fala em português.",
     "f5_ckpt":          os.path.join(CREW_HOME, "models/f5-tts/pt-br/model_last.safetensors"),
     "f5_vocab":         os.path.join(CREW_HOME, "models/f5-tts/F5TTS_Base/vocab.txt"),
+    "install_f5":       False,           # o install.py inclui o F5-TTS (opt-in)
 }
 
 HELP: dict = {
@@ -57,6 +58,7 @@ HELP: dict = {
     "ref_text":         "Transcrição literal do áudio de referência (obrigatório para F5-TTS)",
     "f5_ckpt":          "Path do checkpoint F5-TTS pt-br (.safetensors)",
     "f5_vocab":         "Path do vocab.txt do F5-TTS",
+    "install_f5":       "true = o install.py (e o crew-setup) reinstala o F5-TTS a cada update (~2,5 GB)",
 }
 
 
@@ -70,6 +72,14 @@ def load() -> dict:
     for k, v in DEFAULTS.items():
         stored.setdefault(k, v)
     return stored
+
+
+def peek() -> dict:
+    """Config atual (defaults + arquivo) sem gravar nada. Usado pelo check.py."""
+    cfg = dict(DEFAULTS)
+    if CONFIG_FILE.exists():
+        cfg.update(json.loads(CONFIG_FILE.read_text()))
+    return cfg
 
 
 def save(cfg: dict) -> None:
